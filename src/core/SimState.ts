@@ -41,6 +41,9 @@ export interface SimEvents extends Record<string, unknown> {
   tempClipRemoved: { id: string; seconds: number };
   /** Active monitor alarms changed; `fresh` lists the ones that just started. */
   alarmsChanged: { alarms: string[]; fresh: string[] };
+  clipPoseChanged: { depth: number; roll: number };
+  clipApplied: { id: string };
+  clipRemoved: { id: string };
 }
 
 /**
@@ -71,8 +74,12 @@ export class SimState {
    *  roughDissection   — dissector strokes that were too fast
    *  unsafeActions     — e.g. scissors or bipolar on a major vessel
    *  retractionOverload — pulling on the lobes before the arachnoid was opened
+   *  clipRepositions   — permanent clips removed and re-applied
    */
-  metrics = { domeStress: 0, roughDissection: 0, unsafeActions: 0, retractionOverload: 0 };
+  metrics = { domeStress: 0, roughDissection: 0, unsafeActions: 0, retractionOverload: 0, clipRepositions: 0 };
+
+  /** Live micro-Doppler reading while the probe touches something (for the HUD). */
+  doppler: { target: string; flow: number } | null = null;
 
   /** Structures positively identified (dissector tap now, Doppler from M5). */
   identified = new Set<StructureId>();

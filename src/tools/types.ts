@@ -3,12 +3,17 @@ import type { Anatomy } from '../anatomy/Anatomy';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { SimState, ToastLevel, ToolId } from '../core/SimState';
 import type { BleedingSystem } from '../physics/bleeding';
+import type { ClipFrame } from '../physics/clipEval';
+import type { Clipping } from '../physics/Clipping';
 import type { Occlusion } from '../physics/occlusion';
 import type { Patient } from '../physics/Patient';
+import type { EndoscopeView } from '../scene/EndoscopeView';
+import type { IcgView } from '../scene/IcgView';
 import type { Stage } from '../scene/Stage';
 
 export type HitKind =
-  | 'brain' | 'vessel' | 'aneurysm' | 'nerve' | 'arachnoid' | 'adhesion' | 'spatula' | 'floor' | 'blood' | 'tempClip';
+  | 'brain' | 'vessel' | 'aneurysm' | 'nerve' | 'arachnoid' | 'adhesion' | 'spatula' | 'floor' | 'blood'
+  | 'tempClip' | 'clip' | 'endoscope';
 
 export interface Hit {
   object: THREE.Object3D;
@@ -30,6 +35,11 @@ export interface ToolContext {
   stage: Stage;
   patient: Patient;
   occlusion: Occlusion;
+  clipping: Clipping;
+  icg: IcgView;
+  endoscope: EndoscopeView;
+  /** Current instrument pose: tip position and basis (y = shaft toward the hand). */
+  pose: ClipFrame;
   /** Throttled toast (same key at most every ~2.5 s). */
   say(key: string, level?: ToastLevel, params?: Record<string, string | number>): void;
   /** Positive identification of a vessel/nerve by gentle touch. */
@@ -60,6 +70,10 @@ export interface ToolBehavior {
   /** Called every frame while the button is held. */
   hold?(p: PointerInfo, ctx: ToolContext): void;
   release?(ctx: ToolContext): void;
+  /** Adjusts the instrument pose (e.g. clip depth and rotation) before it is drawn. */
+  adjustPose?(pose: ClipFrame, ctx: ToolContext): void;
+  /** Tool-specific keys (lower-case `KeyboardEvent.key`). Return true if handled. */
+  key?(key: string, ctx: ToolContext): boolean;
 }
 
 export function vesselWarn(hit: Hit): HoverClass {

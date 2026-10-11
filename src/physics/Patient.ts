@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Anatomy } from '../anatomy/Anatomy';
 import type { SimState } from '../core/SimState';
 import type { BleedingSystem } from './bleeding';
+import type { Clipping } from './Clipping';
 import type { Occlusion } from './occlusion';
 import { PHYSIO } from './physiology';
 import { RuptureModel } from './rupture';
@@ -27,6 +28,7 @@ export class Patient {
     private readonly anatomy: Anatomy,
     readonly bleeding: BleedingSystem,
     private readonly occlusion: Occlusion,
+    private readonly clipping: Clipping,
   ) {
     this.domeMat = anatomy.aneurysm.mesh.material as THREE.MeshStandardMaterial;
   }
@@ -55,7 +57,8 @@ export class Patient {
   update(dt: number): void {
     this.elapsed += dt;
     if (this.rupture.takeWarning()) this.state.toast('msg.domeThinning', 'danger');
-    if (this.rupture.update(dt)) this.onRupture();
+    // Once the neck is securely clipped the sac is out of the circulation and cannot rupture.
+    if (!this.clipping.occluded && this.rupture.update(dt)) this.onRupture();
 
     // The stressed dome flushes red — a visible warning to back off.
     this.domeMat.emissive.setRGB(0.5, 0.02, 0.02).multiplyScalar(this.rupture.acuteLevel * 0.35);
@@ -64,6 +67,7 @@ export class Patient {
       ebl: this.bleeding.totalLoss,
       icaOccluded: this.occlusion.icaOccluded,
       sinceRupture: this.ruptureAt === null ? null : this.elapsed - this.ruptureAt,
+      ischemia: this.clipping.ischemia(),
     });
     this.state.heartRate = this.vitals.hr;
 
@@ -76,7 +80,7 @@ export class Patient {
   }
 
   bleedEnv(): { inflow: number; map: number } {
-    return { inflow: this.occlusion.inflow(), map: this.vitals.map };
+    return { inflow: this.clipping.flow.aneurysm, map: this.vitals.map };
   }
 
   private onRupture(): void {

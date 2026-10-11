@@ -3,13 +3,19 @@ import type { Anatomy } from '../anatomy/Anatomy';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { SimState, ToastLevel, ToolId } from '../core/SimState';
 import type { BleedingSystem } from '../physics/bleeding';
+import type { Clipping } from '../physics/Clipping';
 import type { Occlusion } from '../physics/occlusion';
+import type { EndoscopeView } from '../scene/EndoscopeView';
+import type { IcgView } from '../scene/IcgView';
 import type { Patient } from '../physics/Patient';
 import type { Stage } from '../scene/Stage';
 import { bipolar } from './bipolar';
 import { dissector } from './dissector';
 import { buildInstrument, type Instrument } from './instruments';
-import { clip, doppler, endoscope, icg } from './pending';
+import { clip } from './clip';
+import { doppler } from './doppler';
+import { endoscope } from './endoscope';
+import { icg } from './icg';
 import { scissors } from './scissors';
 import { spatula } from './spatula';
 import { suction } from './suction';
@@ -58,10 +64,14 @@ export class ToolManager {
     private readonly bleeding: BleedingSystem,
     private readonly audio: AudioEngine,
     private readonly stage: Stage,
-    services: { identify: (id: string) => void; patient: Patient; occlusion: Occlusion },
+    services: {
+      identify: (id: string) => void; patient: Patient; occlusion: Occlusion;
+      clipping: Clipping; icg: IcgView; endoscope: EndoscopeView;
+    },
   ) {
     this.ctx = {
       state, anatomy, bleeding, audio, stage, ...services,
+      pose: { tip: new THREE.Vector3(), x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) },
       say: (key, level = 'info', params) => this.say(key, level, params),
       pickUnder: (exclude) => this.pick(exclude),
     };
@@ -72,6 +82,15 @@ export class ToolManager {
     state.bus.on('toolChanged', () => this.switchTool());
     state.bus.on('clipVariantChanged', () => this.switchTool());
     this.bindPointer(stage.renderer.domElement);
+    window.addEventListener('keydown', (e) => {
+      if (!this.enabled || e.repeat && !['q', 'e', '[', ']'].includes(e.key.toLowerCase())) return;
+      if (this.behavior.key?.(e.key.toLowerCase(), this.ctx)) e.preventDefault();
+    });
+  }
+
+  /** The instrument model following the pointer (hidden by the endoscope while it renders). */
+  get cursorObject(): THREE.Object3D {
+    return this.cursor;
   }
 
   get hoverHit(): Hit | null {
@@ -135,6 +154,8 @@ export class ToolManager {
       ...this.anatomy.pickables(),
       ...this.bleeding.group.children.filter((c) => c.visible && c.userData.kind),
       ...this.ctx.occlusion.pickables(),
+      ...this.ctx.clipping.pickables(),
+      ...this.ctx.endoscope.pickables(),
     ];
     for (const h of this.raycaster.intersectObjects(objects, false)) {
       const kind = h.object.userData.kind as HitKind;
@@ -143,6 +164,8 @@ export class ToolManager {
       if (kind === 'adhesion' && h.object.userData.adhesion?.freed) continue;
       if (kind === 'spatula' && this.state.tool !== 'spatula') continue;
       if (kind === 'tempClip' && this.state.tool !== 'tempClip') continue;
+      if (kind === 'clip' && this.state.tool !== 'clip') continue;
+      if (kind === 'endoscope' && this.state.tool !== 'endoscope') continue;
       const normal = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0, 0, 1);
       if (normal.dot(this.raycaster.ray.direction) > 0) normal.negate(); // double-sided membranes
       return { object: h.object, point: h.point.clone(), normal, kind, id: h.object.userData.id };
@@ -223,8 +246,11 @@ export class ToolManager {
     const y = hand.sub(tip).normalize();
     const x = camRight.clone().addScaledVector(y, -camRight.dot(y)).normalize();
     const z = new THREE.Vector3().crossVectors(x, y);
-    this.cursor.position.copy(tip);
-    this.cursor.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z));
+    const pose = this.ctx.pose;
+    pose.tip.copy(tip); pose.x.copy(x); pose.y.copy(y); pose.z.copy(z);
+    this.behavior.adjustPose?.(pose, this.ctx);
+    this.cursor.position.copy(pose.tip);
+    this.cursor.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(pose.x, pose.y, pose.z));
 
     // Jaws
     if (this.behavior.jaw) {

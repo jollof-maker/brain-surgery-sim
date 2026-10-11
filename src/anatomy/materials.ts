@@ -16,9 +16,13 @@ export const tissueUniforms = {
  */
 function withPulsation<T extends THREE.MeshStandardMaterial>(mat: T, amplitude: number): T {
   if (amplitude <= 0) return mat;
+  // Kept on userData so flow changes (clips) can scale a vessel's pulsation at runtime.
+  const amp = { value: amplitude };
+  mat.userData.pulseAmp = amp;
+  mat.userData.pulseBase = amplitude;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uPulse = tissueUniforms.uPulse;
-    shader.uniforms.uPulseAmp = { value: amplitude };
+    shader.uniforms.uPulseAmp = amp;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uPulse;\nuniform float uPulseAmp;')
       .replace(

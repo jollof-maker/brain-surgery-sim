@@ -1,8 +1,10 @@
 /**
  * Procedural Web Audio sounds. The AudioContext is created on the first user
  * gesture (the Begin button) because browsers block audio before that.
- * Instrument sounds, monitor beep and alarms; M5 adds the Doppler.
+ * Instrument sounds, monitor beep, alarms and the micro-Doppler.
  */
+type LoopName = 'bipolar' | 'suction' | 'doppler';
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
@@ -58,7 +60,7 @@ export class AudioEngine {
   }
 
   /** Continuous sound while an instrument is active (e.g. bipolar buzz, suction hiss). */
-  setLoop(name: 'bipolar' | 'suction', on: boolean): void {
+  setLoop(name: LoopName, on: boolean): void {
     const ctx = this.ctx;
     if (!ctx) return;
     const existing = this.loops.get(name);
@@ -70,7 +72,7 @@ export class AudioEngine {
     if (existing) return;
     const g = ctx.createGain();
     g.gain.value = 0;
-    g.gain.setTargetAtTime(name === 'bipolar' ? 0.12 : 0.18, ctx.currentTime, 0.03);
+    if (name !== 'doppler') g.gain.setTargetAtTime(name === 'bipolar' ? 0.12 : 0.18, ctx.currentTime, 0.03);
     g.connect(this.master);
     const nodes: AudioScheduledSourceNode[] = [];
     if (name === 'bipolar') {
@@ -83,6 +85,21 @@ export class AudioEngine {
       lp.frequency.value = 1800;
       osc.connect(lp).connect(g);
       nodes.push(osc);
+    } else if (name === 'doppler') {
+      // Doppler audio is band-limited noise whose center frequency follows blood velocity.
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      src.loop = true;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.Q.value = 3;
+      bp.frequency.value = 300;
+      const bp2 = ctx.createBiquadFilter();
+      bp2.type = 'bandpass';
+      bp2.Q.value = 2;
+      src.connect(bp).connect(bp2).connect(g);
+      this.dopplerNodes = { bp, bp2, g };
+      nodes.push(src);
     } else {
       const src = ctx.createBufferSource();
       src.buffer = this.noise;
@@ -197,8 +214,25 @@ export class AudioEngine {
   }
 
   private suctionFilter: BiquadFilterNode | null = null;
+  private dopplerNodes: { bp: BiquadFilterNode; bp2: BiquadFilterNode; g: GainNode } | null = null;
+
+  /**
+   * Updates the Doppler sound each frame: `flow` 0..1 sets loudness,
+   * `velocity` (1 = normal) and the arterial `pulse` 0..1 set the pitch —
+   * a whoosh that rises in systole.
+   */
+  setDoppler(flow: number, velocity: number, pulse: number): void {
+    const n = this.dopplerNodes;
+    if (!n || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const f = 180 + 1500 * velocity * (0.2 + pulse);
+    n.bp.frequency.setTargetAtTime(f, t, 0.01);
+    n.bp2.frequency.setTargetAtTime(f * 1.4, t, 0.01);
+    // A faint probe hiss is always there; flow adds the signal.
+    n.g.gain.setTargetAtTime(0.02 + 0.9 * Math.min(1, flow) * (0.25 + pulse), t, 0.01);
+  }
 
   stopAll(): void {
-    for (const name of [...this.loops.keys()]) this.setLoop(name as 'bipolar' | 'suction', false);
+    for (const name of [...this.loops.keys()]) this.setLoop(name as LoopName, false);
   }
 }

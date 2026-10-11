@@ -1,4 +1,5 @@
 import { TOOL_ORDER, type SimState, type ToolId } from '../core/SimState';
+import { clipPose } from '../tools/clip';
 import { applyI18n, t } from './i18n';
 
 /** Simple line icons (24×24, stroke = currentColor). */
@@ -36,6 +37,7 @@ export class Toolbar {
       <div id="clip-variants" class="panel">
         <button class="btn" data-variant="straight" data-i18n="tool.clip.straight"></button>
         <button class="btn" data-variant="curved" data-i18n="tool.clip.curved"></button>
+        <span id="clip-pose" class="num"></span>
       </div>
       <div id="toolbar" class="panel">${buttons}</div>
     `);
@@ -58,6 +60,7 @@ export class Toolbar {
     state.bus.on('toolChanged', () => this.render());
     state.bus.on('clipVariantChanged', () => this.render());
     state.bus.on('langChanged', () => this.render());
+    state.bus.on('clipPoseChanged', () => this.render());
     applyI18n(document.body);
     this.render();
   }
@@ -71,6 +74,7 @@ export class Toolbar {
     this.variants.querySelectorAll<HTMLElement>('[data-variant]').forEach((b) => {
       b.classList.toggle('active', b.dataset.variant === this.state.clipVariant);
     });
+    document.getElementById('clip-pose')!.textContent = t('clip.pose', { depth: clipPose.depth.toFixed(1), roll: clipPose.roll });
     this.tip.textContent = `${t(`tool.${this.state.tool}`)} — ${t(`tip.${this.state.tool}`)}`;
   }
 
