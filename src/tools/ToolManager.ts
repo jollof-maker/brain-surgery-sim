@@ -3,14 +3,17 @@ import type { Anatomy } from '../anatomy/Anatomy';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { SimState, ToastLevel, ToolId } from '../core/SimState';
 import type { BleedingSystem } from '../physics/bleeding';
+import type { Occlusion } from '../physics/occlusion';
+import type { Patient } from '../physics/Patient';
 import type { Stage } from '../scene/Stage';
 import { bipolar } from './bipolar';
 import { dissector } from './dissector';
 import { buildInstrument, type Instrument } from './instruments';
-import { clip, doppler, endoscope, icg, tempClip } from './pending';
+import { clip, doppler, endoscope, icg } from './pending';
 import { scissors } from './scissors';
 import { spatula } from './spatula';
 import { suction } from './suction';
+import { tempClip } from './tempClip';
 import type { Hit, HitKind, HoverClass, ToolBehavior, ToolContext } from './types';
 
 const BEHAVIORS: Record<ToolId, ToolBehavior> = {
@@ -55,10 +58,10 @@ export class ToolManager {
     private readonly bleeding: BleedingSystem,
     private readonly audio: AudioEngine,
     private readonly stage: Stage,
-    identify: (id: string) => void,
+    services: { identify: (id: string) => void; patient: Patient; occlusion: Occlusion },
   ) {
     this.ctx = {
-      state, anatomy, bleeding, audio, stage, identify,
+      state, anatomy, bleeding, audio, stage, ...services,
       say: (key, level = 'info', params) => this.say(key, level, params),
       pickUnder: (exclude) => this.pick(exclude),
     };
@@ -128,13 +131,18 @@ export class ToolManager {
     const r = el.getBoundingClientRect();
     this.ndc.set(((this.client.x - r.left) / r.width) * 2 - 1, -((this.client.y - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(this.ndc, this.stage.scope.camera);
-    const objects = [...this.anatomy.pickables(), ...this.bleeding.group.children.filter((c) => c.visible && c.userData.kind)];
+    const objects = [
+      ...this.anatomy.pickables(),
+      ...this.bleeding.group.children.filter((c) => c.visible && c.userData.kind),
+      ...this.ctx.occlusion.pickables(),
+    ];
     for (const h of this.raycaster.intersectObjects(objects, false)) {
       const kind = h.object.userData.kind as HitKind;
       if (exclude.includes(kind)) continue;
       if (kind === 'arachnoid' && h.object.userData.segment?.cut) continue;
       if (kind === 'adhesion' && h.object.userData.adhesion?.freed) continue;
       if (kind === 'spatula' && this.state.tool !== 'spatula') continue;
+      if (kind === 'tempClip' && this.state.tool !== 'tempClip') continue;
       const normal = h.face ? h.face.normal.clone().transformDirection(h.object.matrixWorld) : new THREE.Vector3(0, 0, 1);
       if (normal.dot(this.raycaster.ray.direction) > 0) normal.negate(); // double-sided membranes
       return { object: h.object, point: h.point.clone(), normal, kind, id: h.object.userData.id };
@@ -232,8 +240,13 @@ export class ToolManager {
     const screenDelta = this.client.clone().sub(this.lastClient);
     const sameTarget = hit && hit.object === this.lastHitObject;
     const tipDelta = sameTarget ? tip.clone().sub(this.lastTip) : new THREE.Vector3();
-    if (this.justPressed) this.behavior.press?.(hit, this.ctx);
-    if (this.pressed) this.behavior.hold?.({ hit, dt, screenDelta, tipDelta }, this.ctx);
+    // Pooled blood hides everything beneath it: only suction works through it.
+    const obscured = hit?.kind === 'blood' && hit.id === 'pool' && this.behavior.id !== 'suction';
+    if (this.justPressed) {
+      if (obscured) this.say('msg.bloodObscures', 'warn');
+      else this.behavior.press?.(hit, this.ctx);
+    }
+    if (this.pressed && !obscured) this.behavior.hold?.({ hit, dt, screenDelta, tipDelta }, this.ctx);
     if (this.justReleased) this.behavior.release?.(this.ctx);
     this.justPressed = this.justReleased = false;
     this.lastClient.copy(this.client);

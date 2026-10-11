@@ -48,7 +48,6 @@ const STRINGS = {
   'tip.icg': { en: 'Fluorescence view arrives in milestone M5.', ja: '蛍光表示はM5で実装予定。' },
   'tip.doppler': { en: 'Doppler flow sounds arrive in milestone M5.', ja: 'ドップラー音はM5で実装予定。' },
   'tip.endoscope': { en: 'Endoscope view arrives in milestone M5.', ja: '内視鏡ビューはM5で実装予定。' },
-  'tip.tempClip': { en: 'Temporary occlusion arrives in milestone M4.', ja: '一時遮断はM4で実装予定。' },
 
   // ---- toasts ----
   'msg.arachnoidCut': { en: 'Arachnoid opened ({n}/{total})', ja: 'くも膜切開 ({n}/{total})' },
@@ -170,6 +169,43 @@ const STRINGS = {
   'struct.optic': { en: 'optic nerve', ja: '視神経' },
   'struct.oculomotor': { en: 'oculomotor nerve', ja: '動眼神経' },
   'hud.help': { en: 'Controls', ja: '操作' },
+  // ---- M4: vitals, rupture, temporary clip ----
+  'msg.domeThinning': { en: 'The dome wall is blanching and thinning — stop handling the dome.', ja: 'ドーム壁が白く菲薄化しています — ドームの操作を止めてください。' },
+  'msg.rupture': { en: 'Intraoperative rupture! Suction, then proximal control.', ja: '術中破裂！ 吸引で視野確保、次に近位血流遮断。' },
+  'msg.bipolarArterial': { en: 'Bipolar cannot seal a torn aneurysm wall — it tears further. Get proximal control.', ja: 'バイポーラで破裂した瘤壁は止血できず、裂傷が広がります。近位遮断を。' },
+  'msg.bloodObscures': { en: 'Blood hides the field — suction first.', ja: '血液で術野が見えません — まず吸引。' },
+  'msg.tempProximal': { en: 'Temporary clip on the proximal ICA — inflow reduced. Occlusion timer running.', ja: 'ICA近位に一時遮断クリップ — 流入減少。遮断タイマー作動中。' },
+  'msg.tempDistal': { en: 'Temporary clip distal to the aneurysm. With a proximal clip too, the aneurysm is trapped.', ja: '瘤より遠位に一時遮断クリップ。近位遮断と併用でトラッピング。' },
+  'msg.tempClipOff': { en: 'Temporary clip removed after {time}.', ja: '一時遮断クリップ解除（遮断時間 {time}）。' },
+  'msg.tempNotDome': { en: 'Never put a temporary clip on the dome.', ja: '一時遮断クリップをドームにかけてはいけません。' },
+  'msg.tempIcaOnly': { en: 'In this simulator, temporary clips go on the supraclinoid ICA.', ja: '本シミュレーターでは一時遮断はICA（床突起上部）にかけます。' },
+  'msg.tempTooClose': { en: 'Too close to the neck — leave room for the permanent clip.', ja: '頸部に近すぎます — 永久クリップの余地を残してください。' },
+  'msg.tempAlready': { en: 'There is already a temporary clip on that side of the aneurysm.', ja: '瘤のその側には既に一時遮断クリップがあります。' },
+  'tip.tempClip': { en: 'Click the exposed ICA to apply a temporary clip (proximal = inflow control); click a clip to remove it. Watch the timer.', ja: '露出したICAをクリックで一時遮断（近位＝流入制御）。クリップをクリックで解除。タイマーに注意。' },
+
+  'vitals.title': { en: 'VITALS · NEUROMONITORING', ja: 'バイタル・神経モニタリング' },
+  'vitals.ebl': { en: 'EBL', ja: '出血量' },
+  'vitals.occ': { en: 'TEMP OCCLUSION', ja: '一時遮断' },
+  'vitals.occTotal': { en: 'total', ja: '累計' },
+  'vitals.sound': { en: 'Monitor sound on/off', ja: 'モニター音 オン/オフ' },
+  'alarm.hrHigh': { en: 'Tachycardia', ja: '頻脈' },
+  'alarm.hrLow': { en: 'Bradycardia', ja: '徐脈' },
+  'alarm.bpLow': { en: 'Hypotension', ja: '低血圧' },
+  'alarm.mepDrop': { en: 'MEP amplitude < {limit}%', ja: 'MEP振幅 < {limit}%' },
+  'alarm.occlusionWarn': { en: 'Occlusion nearing {safe}', ja: '遮断時間が{safe}に接近' },
+  'alarm.occlusionLong': { en: 'Occlusion > {safe} — release or reperfuse', ja: '遮断 > {safe} — 解除・再灌流を' },
+
+  'crisis.title': { en: 'RUPTURE — BLEEDING CONTROL', ja: '破裂 — 止血手順' },
+  'crisis.guide': { en: 'Stay calm. Keep the field visible with suction, get proximal control, then clip the neck. Never clip blindly into blood.', ja: '落ち着いて。吸引で視野を保ち、近位遮断を行ってから頸部をクリップ。血液の中で盲目的にクリップしない。' },
+  'crisis.clearField': { en: 'Clear the field with suction', ja: '吸引で視野を確保' },
+  'crisis.proximalControl': { en: 'Temporary clip on the proximal ICA', ja: 'ICA近位に一時遮断クリップ' },
+  'crisis.definitiveClip': { en: 'Definitive clip across the neck (M5)', ja: '頸部に永久クリップ（M5）' },
+  'crisis.releaseTemp': { en: 'Release the temporary clip', ja: '一時遮断クリップを解除' },
+  'crisis.hint.clearField': { en: 'Suction (1): hold the tip in the blood pool until the proximal ICA is visible again.', ja: '吸引（1）：近位ICAが見えるまで血液プールの中で押し続ける。' },
+  'crisis.hint.proximalControl': { en: 'Temporary clip (0): click the ICA between the clinoid and the aneurysm.', ja: '一時遮断クリップ（0）：床突起と瘤の間のICAをクリック。' },
+  'crisis.hint.definitiveClip': { en: 'Permanent clip application arrives in M5. Keep suctioning; the occlusion clock is running.', ja: '永久クリップ操作はM5で実装。吸引を続けて。遮断時間が進行中。' },
+  'crisis.hint.releaseTemp': { en: 'Temporary clip (0): click the clip to release it and restore flow.', ja: '一時遮断クリップ（0）：クリップをクリックして解除し血流を再開。' },
+  'crisis.resolved': { en: 'Bleeding controlled.', ja: '止血完了。' },
 } satisfies Record<string, Record<Lang, string>>;
 
 export type StringKey = keyof typeof STRINGS;

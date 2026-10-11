@@ -79,7 +79,7 @@ export const scissors: ToolBehavior = {
         break;
       case 'aneurysm':
         state.metrics.unsafeActions++;
-        state.metrics.domeStress += 5;
+        ctx.patient.stressDome(5, hit.point);
         ctx.say('msg.domeDanger', 'danger');
         break;
       case 'nerve':

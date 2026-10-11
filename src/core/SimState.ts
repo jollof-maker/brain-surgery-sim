@@ -36,6 +36,11 @@ export interface SimEvents extends Record<string, unknown> {
   oozeStarted: { id: number };
   oozeStopped: { id: number };
   structureIdentified: { id: StructureId };
+  ruptured: { time: number };
+  tempClipApplied: { id: string; proximal: boolean };
+  tempClipRemoved: { id: string; seconds: number };
+  /** Active monitor alarms changed; `fresh` lists the ones that just started. */
+  alarmsChanged: { alarms: string[]; fresh: string[] };
 }
 
 /**

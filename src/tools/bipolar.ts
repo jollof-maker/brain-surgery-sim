@@ -19,7 +19,8 @@ export const bipolar: ToolBehavior = {
   jaw: { pressed: 0, released: 1 },
 
   classify(hit, ctx) {
-    if (ctx.bleeding.nearest(hit.point, REACH)) return 'valid';
+    const src = ctx.bleeding.nearest(hit.point, REACH);
+    if (src) return src.type === 'arterial' ? 'warn' : 'valid';
     if (hit.kind === 'vessel' || hit.kind === 'aneurysm' || hit.kind === 'nerve') return 'warn';
     return 'none';
   },
@@ -32,6 +33,12 @@ export const bipolar: ToolBehavior = {
   hold(p, ctx) {
     if (!p.hit) return;
     const src = ctx.bleeding.nearest(p.hit.point, REACH);
+    if (src?.type === 'arterial') {
+      // A torn aneurysm wall cannot be sealed with bipolar — it shrinks and tears further.
+      ctx.patient.stressDome(p.dt * 2, p.hit.point);
+      ctx.say('msg.bipolarArterial', 'danger');
+      return;
+    }
     if (src && src.active) {
       src.coag += p.dt;
       if (src.coag >= COAG_TIME) {
@@ -42,7 +49,7 @@ export const bipolar: ToolBehavior = {
       return;
     }
     if (p.hit.kind === 'aneurysm') {
-      ctx.state.metrics.domeStress += p.dt * 2;
+      ctx.patient.stressDome(p.dt * 2, p.hit.point);
       ctx.say('msg.domeDanger', 'danger');
     } else if (p.hit.kind === 'vessel' || p.hit.kind === 'nerve') {
       vesselContact += p.dt;

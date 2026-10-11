@@ -3,10 +3,12 @@ import type { Anatomy } from '../anatomy/Anatomy';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { SimState, ToastLevel, ToolId } from '../core/SimState';
 import type { BleedingSystem } from '../physics/bleeding';
+import type { Occlusion } from '../physics/occlusion';
+import type { Patient } from '../physics/Patient';
 import type { Stage } from '../scene/Stage';
 
 export type HitKind =
-  | 'brain' | 'vessel' | 'aneurysm' | 'nerve' | 'arachnoid' | 'adhesion' | 'spatula' | 'floor' | 'blood';
+  | 'brain' | 'vessel' | 'aneurysm' | 'nerve' | 'arachnoid' | 'adhesion' | 'spatula' | 'floor' | 'blood' | 'tempClip';
 
 export interface Hit {
   object: THREE.Object3D;
@@ -26,6 +28,8 @@ export interface ToolContext {
   bleeding: BleedingSystem;
   audio: AudioEngine;
   stage: Stage;
+  patient: Patient;
+  occlusion: Occlusion;
   /** Throttled toast (same key at most every ~2.5 s). */
   say(key: string, level?: ToastLevel, params?: Record<string, string | number>): void;
   /** Positive identification of a vessel/nerve by gentle touch. */

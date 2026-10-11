@@ -36,7 +36,7 @@ export const dissector: ToolBehavior = {
       if (rough) {
         ctx.state.metrics.roughDissection += p.dt;
         // Tugging on tissue attached to the dome transmits force to the wall.
-        if (adh.id === 'domeTether' || adh.id.startsWith('neck')) ctx.state.metrics.domeStress += stroke * 0.15;
+        if (adh.id === 'domeTether' || adh.id.startsWith('neck')) ctx.patient.stressDome(stroke * 0.15, hit.point);
         ctx.say('msg.tooFast', 'warn');
         amount *= 0.4;
       }
@@ -45,7 +45,7 @@ export const dissector: ToolBehavior = {
         ctx.state.toast('msg.adhesionFreed', 'good', { name: `adhesion.${adh.id}` });
       }
     } else if (hit.kind === 'aneurysm') {
-      ctx.state.metrics.domeStress += stroke * (rough ? 0.8 : 0.3);
+      ctx.patient.stressDome(stroke * (rough ? 0.8 : 0.3), hit.point);
       if (stroke > 0.01) ctx.say('msg.domeDanger', 'danger');
     }
   },

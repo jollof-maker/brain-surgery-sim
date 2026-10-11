@@ -1,3 +1,4 @@
+import { PHYSIO } from '../physics/physiology';
 import type { ToolBehavior } from './types';
 
 /**
@@ -22,9 +23,11 @@ export const suction: ToolBehavior = {
 
   hold(p, ctx) {
     if (!p.hit) return;
-    ctx.bleeding.suction(p.hit.point, 3, p.dt);
-    if (p.hit.kind === 'aneurysm') {
-      ctx.state.metrics.domeStress += p.dt * 0.5;
+    ctx.bleeding.suction(p.hit.point, PHYSIO.suction.radius, p.dt);
+    // Aspirating at a rupture site is expected; anywhere else on the dome it is not.
+    const atRupture = ctx.bleeding.nearest(p.hit.point, 3)?.type === 'arterial';
+    if (p.hit.kind === 'aneurysm' && !atRupture) {
+      ctx.patient.stressDome(p.dt * 0.5, p.hit.point);
       ctx.say('msg.suctionDome', 'warn');
     }
   },
