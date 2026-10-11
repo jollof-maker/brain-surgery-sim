@@ -62,6 +62,20 @@ export class MicroscopeCamera {
     }
   }
 
+  /**
+   * Scripted move (demo mode): focal point, tilt (yaw/pitch in degrees, within
+   * the corridor limit) and field diameter, each optional. Smoothed like user moves.
+   */
+  moveTo(opts: { target?: THREE.Vector3; tiltDeg?: [number, number]; field?: number }): void {
+    if (opts.target) this.goalTarget.copy(opts.target);
+    if (opts.tiltDeg) {
+      const max = this.cfg.maxTiltDeg;
+      const [yaw, pitch] = opts.tiltDeg.map((d) => THREE.MathUtils.degToRad(THREE.MathUtils.clamp(d, -max, max)));
+      this.goalTilt.set(yaw, pitch);
+    }
+    if (opts.field) this.goalField = THREE.MathUtils.clamp(opts.field, this.cfg.fieldMin, this.cfg.fieldMax);
+  }
+
   focusOn(point: THREE.Vector3): void {
     this.goalTarget.copy(point);
   }

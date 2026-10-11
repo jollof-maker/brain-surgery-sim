@@ -11,14 +11,20 @@ export class Shell {
   private magEl!: HTMLElement;
   private fieldEl!: HTMLElement;
 
-  constructor(state: SimState, onBegin: () => void) {
+  constructor(
+    state: SimState,
+    on: { begin: () => void; demo: () => void; debrief: () => void; mute: () => boolean },
+  ) {
     document.body.insertAdjacentHTML('beforeend', `
       <div id="eyepiece"></div>
       <div id="topbar" class="panel">
         <span><span class="label" data-i18n="hud.mag"></span><span class="num" id="hud-mag"></span></span>
         <span><span class="label" data-i18n="hud.field"></span><span class="num" id="hud-field"></span></span>
         <span class="edu" data-i18n="hud.edu"></span>
-        <button class="btn" id="help-toggle" data-i18n="hud.help"></button>
+        <button class="btn" id="demo-toggle" data-i18n="hud.demo"></button>
+        <button class="btn" id="debrief-open" data-i18n="hud.debrief"></button>
+        <button class="btn" id="mute-toggle" data-i18n-title="hud.mute">🔊</button>
+        <button class="btn" id="help-toggle" data-i18n-title="hud.help">?</button>
         <button class="btn" id="lang-toggle" data-i18n="hud.lang"></button>
       </div>
       <div id="controls-hint" class="panel">
@@ -49,7 +55,8 @@ export class Shell {
             <li data-i18n="controls.focus"></li>
             <li data-i18n="controls.reset"></li>
           </ul>
-          <div class="row" style="justify-content:flex-end">
+          <div class="row" style="justify-content:flex-end; gap:10px">
+            <button class="btn" id="watch-demo" data-i18n="start.demo"></button>
             <button class="btn primary" id="begin" data-i18n="start.begin"></button>
           </div>
         </div>
@@ -66,9 +73,20 @@ export class Shell {
     document.getElementById('start-lang')!.addEventListener('click', toggle);
     state.bus.on('langChanged', (lang) => setLang(lang));
 
-    document.getElementById('begin')!.addEventListener('click', () => {
+    const begin = () => {
       document.getElementById('start')!.classList.add('hidden');
-      onBegin();
+      on.begin();
+    };
+    document.getElementById('begin')!.addEventListener('click', begin);
+    document.getElementById('watch-demo')!.addEventListener('click', () => {
+      begin();
+      on.demo();
+    });
+    document.getElementById('demo-toggle')!.addEventListener('click', () => on.demo());
+    document.getElementById('debrief-open')!.addEventListener('click', () => on.debrief());
+    const mute = document.getElementById('mute-toggle')!;
+    mute.addEventListener('click', () => {
+      mute.textContent = on.mute() ? '🔇' : '🔊';
     });
     applyI18n(document.body);
   }

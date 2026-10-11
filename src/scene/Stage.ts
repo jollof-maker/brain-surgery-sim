@@ -76,6 +76,25 @@ export class Stage {
 
   render(dt: number): void {
     this.fx.render(dt);
+    this.adapt(dt);
+  }
+
+  private slow = 0;
+
+  /**
+   * Adaptive resolution: if frames stay slower than ~30 fps for a few seconds,
+   * drop the pixel ratio a step (2 → 1.5 → 1). Postprocessing cost scales with
+   * pixel count, so this is the most effective knob on weak GPUs.
+   */
+  private adapt(dt: number): void {
+    const dpr = this.renderer.getPixelRatio();
+    if (LOW_QUALITY || dpr <= 1) return;
+    this.slow = dt > 1 / 30 ? this.slow + dt : Math.max(0, this.slow - dt * 0.5);
+    if (this.slow < 3) return;
+    this.slow = 0;
+    this.renderer.setPixelRatio(Math.max(1, dpr - 0.5));
+    this.resize();
+    console.info(`[stage] slow frames: pixel ratio ${dpr} → ${this.renderer.getPixelRatio()}`);
   }
 
   /** Raycast from normalized device coordinates. */

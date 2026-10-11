@@ -3,6 +3,7 @@ import type { Anatomy } from '../anatomy/Anatomy';
 import type { AudioEngine } from '../audio/AudioEngine';
 import type { SimState, ToastLevel, ToolId } from '../core/SimState';
 import type { BleedingSystem } from '../physics/bleeding';
+import type { ClipFrame } from '../physics/clipEval';
 import type { Clipping } from '../physics/Clipping';
 import type { Occlusion } from '../physics/occlusion';
 import type { EndoscopeView } from '../scene/EndoscopeView';
@@ -123,11 +124,12 @@ export class ToolManager {
 
   private bindPointer(el: HTMLElement): void {
     el.addEventListener('pointermove', (e) => {
+      if (this.virtual) return; // the demo owns the pointer until the user takes over
       this.client.set(e.clientX, e.clientY);
       this.inside = true;
     });
     el.addEventListener('pointerenter', () => { this.inside = true; });
-    el.addEventListener('pointerleave', () => { if (!this.pressed) this.inside = false; });
+    el.addEventListener('pointerleave', () => { if (!this.pressed && !this.virtual) this.inside = false; });
     el.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || !this.enabled) return;
       this.client.set(e.clientX, e.clientY);
@@ -171,6 +173,63 @@ export class ToolManager {
       return { object: h.object, point: h.point.clone(), normal, kind, id: h.object.userData.id };
     }
     return null;
+  }
+
+  /** Pose of the instrument for a hit (tip on the surface, y = shaft toward the hand), before tool adjustments. */
+  private basePose(hit: Hit | null, out: ClipFrame): void {
+    const cam = this.stage.scope.camera;
+    const tip = hit
+      ? hit.point.clone().addScaledVector(hit.normal, 0.15)
+      : this.raycaster.ray.at(cam.position.distanceTo(this.stage.scope.target), new THREE.Vector3());
+    const camRight = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+    const camUp = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+    const hand = cam.position.clone()
+      .addScaledVector(camRight, this.behavior.hand === 'left' ? -75 : 75)
+      .addScaledVector(camUp, -95);
+    out.y.copy(hand.sub(tip).normalize());
+    out.x.copy(camRight).addScaledVector(out.y, -camRight.dot(out.y)).normalize();
+    out.z.crossVectors(out.x, out.y);
+    out.tip.copy(tip);
+  }
+
+  /** Demo helper: the active tool's hit and unadjusted pose at a page pixel. */
+  poseAt(x: number, y: number): { hit: Hit | null; pose: ClipFrame } {
+    const saved = this.client.clone();
+    this.client.set(x, y);
+    const hit = this.pick(this.behavior.passThrough);
+    const pose: ClipFrame = { tip: new THREE.Vector3(), x: new THREE.Vector3(), y: new THREE.Vector3(), z: new THREE.Vector3() };
+    this.basePose(hit, pose);
+    this.client.copy(saved);
+    return { hit, pose };
+  }
+
+  // ---- virtual pointer (demo mode drives the same input path as the mouse) ----
+  private virtual = false;
+
+  setVirtual(on: boolean): void {
+    this.virtual = on;
+    if (on) this.inside = true;
+    else if (this.pressed) { this.pressed = false; this.justReleased = true; }
+  }
+
+  virtualMove(x: number, y: number): void {
+    this.client.set(x, y);
+    this.inside = true;
+  }
+
+  virtualDown(): void {
+    this.pressed = true;
+    this.justPressed = true;
+  }
+
+  virtualUp(): void {
+    if (!this.pressed) return;
+    this.pressed = false;
+    this.justReleased = true;
+  }
+
+  virtualKey(key: string): void {
+    this.behavior.key?.(key, this.ctx);
   }
 
   /** Debug/test helper: what the active tool would hit at a page pixel. */
@@ -234,20 +293,9 @@ export class ToolManager {
     this.stage.renderer.domElement.style.cursor = this.instrument.root.children.length ? 'none' : 'crosshair';
 
     // Instrument pose: tip at the target, shaft toward the surgeon's hand.
-    const cam = this.stage.scope.camera;
-    const tip = hit
-      ? hit.point.clone().addScaledVector(hit.normal, 0.15)
-      : this.raycaster.ray.at(this.stage.scope.camera.position.distanceTo(this.stage.scope.target), new THREE.Vector3());
-    const camRight = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-    const camUp = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
-    const hand = cam.position.clone()
-      .addScaledVector(camRight, this.behavior.hand === 'left' ? -75 : 75)
-      .addScaledVector(camUp, -95);
-    const y = hand.sub(tip).normalize();
-    const x = camRight.clone().addScaledVector(y, -camRight.dot(y)).normalize();
-    const z = new THREE.Vector3().crossVectors(x, y);
     const pose = this.ctx.pose;
-    pose.tip.copy(tip); pose.x.copy(x); pose.y.copy(y); pose.z.copy(z);
+    this.basePose(hit, pose);
+    const tip = pose.tip.clone();
     this.behavior.adjustPose?.(pose, this.ctx);
     this.cursor.position.copy(pose.tip);
     this.cursor.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(pose.x, pose.y, pose.z));

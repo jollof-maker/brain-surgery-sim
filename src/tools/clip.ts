@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CLIP_LENGTH } from '../physics/clipEval';
+import { CLIP_LENGTH, type ClipFrame } from '../physics/clipEval';
 import type { ToolBehavior } from './types';
 
 /**
@@ -12,6 +12,15 @@ import type { ToolBehavior } from './types';
  */
 export const clipPose = { depth: 4.5, roll: 0 };
 const DEPTH = { min: 1, max: 10, step: 0.5 };
+
+/** Rolls the blades around the shaft, then advances the tips along the approach (mutates `pose`). */
+export function applyClipPose(pose: ClipFrame, depth: number, rollDeg: number): ClipFrame {
+  const q = new THREE.Quaternion().setFromAxisAngle(pose.y, THREE.MathUtils.degToRad(rollDeg));
+  pose.x.applyQuaternion(q);
+  pose.z.applyQuaternion(q);
+  pose.tip.addScaledVector(pose.y, -depth);
+  return pose;
+}
 const ROLL_STEP = 15;
 
 /**
@@ -33,11 +42,7 @@ export const clip: ToolBehavior = {
   },
 
   adjustPose(pose) {
-    // Roll the blades around the shaft, then advance the tips along the approach.
-    const q = new THREE.Quaternion().setFromAxisAngle(pose.y, THREE.MathUtils.degToRad(clipPose.roll));
-    pose.x.applyQuaternion(q);
-    pose.z.applyQuaternion(q);
-    pose.tip.addScaledVector(pose.y, -clipPose.depth);
+    applyClipPose(pose, clipPose.depth, clipPose.roll);
   },
 
   key(key, ctx) {

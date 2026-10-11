@@ -10,6 +10,9 @@ import { Clipping } from './physics/Clipping';
 import { Occlusion } from './physics/occlusion';
 import { Patient } from './physics/Patient';
 import { Crisis } from './procedure/crisis';
+import type { DebriefInput } from './procedure/debrief';
+import { DemoDirector } from './procedure/DemoDirector';
+import { PHYSIO } from './physics/physiology';
 import { createProcedureView, identifyStructure } from './procedure/identify';
 import { StageMachine } from './procedure/StageMachine';
 import { updateRetraction } from './physics/retraction';
@@ -18,6 +21,7 @@ import { IcgView } from './scene/IcgView';
 import { Stage } from './scene/Stage';
 import { ToolManager } from './tools/ToolManager';
 import { Checklist } from './ui/Checklist';
+import { Debrief } from './ui/Debrief';
 import { DopplerHud } from './ui/DopplerHud';
 import { Mentor } from './ui/Mentor';
 import { Shell } from './ui/Shell';
@@ -57,11 +61,19 @@ const tools = new ToolManager(state, anatomy, bleeding, audio, stage, {
   identify: (id) => identifyStructure(state, view, id), patient, occlusion, clipping, icg, endoscope,
 });
 let running = false;
-const shell = new Shell(state, () => {
-  running = true;
-  audio.start();
-  tools.enabled = true;
-  for (const p of panels) p.show(true);
+const shell = new Shell(state, {
+  begin: () => {
+    running = true;
+    audio.start();
+    tools.enabled = true;
+    for (const p of panels) p.show(true);
+  },
+  demo: () => {
+    debrief.close();
+    demo.start();
+  },
+  debrief: () => debrief.open(),
+  mute: () => audio.toggleMute(),
 });
 const mentor = new Mentor(state, machine, crisis);
 const vitalsPanel = new VitalsPanel(state, patient, audio);
@@ -69,6 +81,37 @@ const panels = [new Toolbar(state), new Checklist(state, machine), mentor, vital
 for (const p of panels) p.show(false);
 new Toasts(state);
 const dopplerHud = new DopplerHud(state);
+
+// ---- debrief ----
+let timeToProximal: number | null = null;
+state.bus.on('tempClipApplied', ({ proximal }) => {
+  if (proximal && patient.ruptureAt !== null && timeToProximal === null) timeToProximal = patient.elapsed - patient.ruptureAt;
+});
+function collectDebrief(): DebriefInput {
+  const v = patient.vitals, e = clipping.effects, m = state.metrics;
+  return {
+    complete: machine.complete,
+    stageTimes: [...machine.stageTime],
+    totalTime: patient.elapsed,
+    ebl: bleeding.totalLoss,
+    ruptured: patient.ruptured,
+    timeToProximal,
+    occlusion: { total: v.totalOcclusionSec, max: v.maxOcclusionSec, safe: PHYSIO.tempClip.safeSec, warn: PHYSIO.tempClip.warnSec },
+    minMep: v.minMep,
+    clip: {
+      applied: clipping.clips.length > 0, closure: e.neckClosure, residual: e.residualNeck, narrowing: e.icaNarrowing,
+      pcom: e.branches.PCom ?? 0, acha: e.branches.AChA ?? 0, nerve: e.nerveContact, repositions: m.clipRepositions,
+    },
+    checks: { icg: state.flags.has('icgDone'), pcom: state.flags.has('pcomFlowConfirmed'), acha: state.flags.has('achaFlowConfirmed') },
+    technique: {
+      domeStress: m.domeStress, roughDissection: m.roughDissection, unsafeActions: m.unsafeActions, retractionOverload: m.retractionOverload,
+    },
+  };
+}
+const debrief = new Debrief(state, collectDebrief);
+machine.bus.on('procedureComplete', () => setTimeout(() => debrief.open(), 2500));
+
+const demo = new DemoDirector({ state, anatomy, bleeding, tools, stage, clipping });
 
 // Pointer position for focus-at-cursor (F).
 const ndc = new THREE.Vector2();
@@ -133,6 +176,7 @@ function frame(time: number): void {
   mentor.update();
   icg.update(dt);
   if (running) updateEndoscope(dt);
+  demo.update(dt);
   dopplerHud.update();
   stage.update(dt);
   tools.update(dt);
@@ -145,5 +189,5 @@ requestAnimationFrame(frame);
 
 // Exposed for debugging and the smoke test.
 if (import.meta.env.DEV) {
-  Object.assign(window, { __sim: { state, stage, anatomy, bleeding, tools, machine, patient, occlusion, crisis, clipping, icg, endoscope } });
+  Object.assign(window, { __sim: { state, stage, anatomy, bleeding, tools, machine, patient, occlusion, crisis, clipping, icg, endoscope, demo, debrief } });
 }

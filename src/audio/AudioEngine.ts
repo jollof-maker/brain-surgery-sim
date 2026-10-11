@@ -15,7 +15,13 @@ export class AudioEngine {
     if (this.ctx) return;
     this.ctx = new AudioContext();
     this.master = this.ctx.createGain();
-    this.master.gain.value = 0.5;
+    // Fade in rather than starting abruptly.
+    this.master.gain.value = 0;
+    this.master.gain.setTargetAtTime(this.muted ? 0 : 0.5, this.ctx.currentTime, 0.3);
+    // Browsers suspend audio in background tabs; resume when the tab returns.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void this.ctx?.resume();
+    });
     this.master.connect(this.ctx.destination);
     // 2 s of white noise, reused by every noise-based sound.
     this.noise = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
@@ -230,6 +236,15 @@ export class AudioEngine {
     n.bp2.frequency.setTargetAtTime(f * 1.4, t, 0.01);
     // A faint probe hiss is always there; flow adds the signal.
     n.g.gain.setTargetAtTime(0.02 + 0.9 * Math.min(1, flow) * (0.25 + pulse), t, 0.01);
+  }
+
+  muted = false;
+
+  /** Mutes / unmutes everything (smooth ramp, no clicks). Returns the new state. */
+  toggleMute(): boolean {
+    this.muted = !this.muted;
+    if (this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
+    return this.muted;
   }
 
   stopAll(): void {
