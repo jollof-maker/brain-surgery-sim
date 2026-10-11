@@ -195,6 +195,91 @@ button { font-family: inherit; }
 .toast.danger { border-left-color: var(--alarm); color: #ffb4b4; }
 .toast.out { opacity: 0; }
 
-@media (max-width: 1200px) {
-  #controls-hint { display: none; }
+
+/* ---------- checklist & mentor ---------- */
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.bar { height: 2px; background: var(--line); margin-top: 8px; }
+.bar > div { height: 100%; background: var(--accent); transition: width 0.4s; }
+.icon-btn {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text);
+  width: 18px;
+  height: 18px;
+  line-height: 14px;
+  padding: 0;
+  margin-left: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#checklist {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  width: 270px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+#checklist ol { list-style: none; margin: 0; padding: 0; }
+.stage { display: flex; align-items: baseline; gap: 6px; padding: 4px 0; color: var(--muted); }
+.stage .mark { width: 12px; text-align: center; }
+.stage .idx { width: 12px; }
+.stage .label { flex: 1; }
+.stage .stage-pct { color: var(--accent); }
+.stage.active { color: var(--text); }
+.stage.active .mark { color: var(--accent); }
+.stage.done { color: #9fcfbf; }
+.stage.done .mark { color: var(--accent); }
+.stage.locked { opacity: 0.55; }
+
+#mentor {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: 330px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+#mentor .mentor-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+#mentor .guide { margin: 0 0 8px; line-height: 1.55; color: #c3d0cc; }
+#mentor .tasks { list-style: none; margin: 0; padding: 0; }
+#mentor .tasks li { display: flex; gap: 8px; align-items: flex-start; padding: 2px 0; }
+#mentor .tasks li.done { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(127, 145, 141, 0.6); }
+#mentor .box {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+  border: 1px solid var(--line-strong);
+  font-size: 10px;
+  line-height: 10px;
+  text-align: center;
+  color: var(--accent);
+}
+#mentor .next { margin-top: 8px; padding: 6px 8px; border-left: 2px solid var(--accent); background: rgba(95, 224, 184, 0.06); line-height: 1.5; }
+#mentor .next .label { color: var(--accent); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-right: 4px; }
+
+/* Controls hint is now toggled from the top bar. */
+#controls-hint { display: none; top: 60px; left: 296px; bottom: auto; }
+#controls-hint.open { display: block; }
+
+/* Narrower screens: keep the toolbar clear of the mentor panel. */
+@media (max-width: 1500px) {
+  #toolbar { left: 12px; transform: none; }
+  #tool-tip, #clip-variants { left: 12px; transform: none; }
+}
+@media (max-width: 1150px) {
+  .tool { width: 58px; }
+  .tool .name { font-size: 9px; }
 }

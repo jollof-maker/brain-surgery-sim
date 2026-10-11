@@ -55,9 +55,10 @@ export class ToolManager {
     private readonly bleeding: BleedingSystem,
     private readonly audio: AudioEngine,
     private readonly stage: Stage,
+    identify: (id: string) => void,
   ) {
     this.ctx = {
-      state, anatomy, bleeding, audio, stage,
+      state, anatomy, bleeding, audio, stage, identify,
       say: (key, level = 'info', params) => this.say(key, level, params),
       pickUnder: (exclude) => this.pick(exclude),
     };

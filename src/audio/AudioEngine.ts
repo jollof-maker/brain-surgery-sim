@@ -38,6 +38,25 @@ export class AudioEngine {
     src.start(t, Math.random(), 0.06);
   }
 
+  /** Soft two-note chime when a stage is completed. */
+  chime(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [660, 880].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t + i * 0.12);
+      g.gain.linearRampToValueAtTime(0.18, t + i * 0.12 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.6);
+      osc.connect(g).connect(this.master);
+      osc.start(t + i * 0.12);
+      osc.stop(t + i * 0.12 + 0.65);
+    });
+  }
+
   /** Continuous sound while an instrument is active (e.g. bipolar buzz, suction hiss). */
   setLoop(name: 'bipolar' | 'suction', on: boolean): void {
     const ctx = this.ctx;

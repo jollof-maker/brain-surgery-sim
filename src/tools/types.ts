@@ -28,6 +28,8 @@ export interface ToolContext {
   stage: Stage;
   /** Throttled toast (same key at most every ~2.5 s). */
   say(key: string, level?: ToastLevel, params?: Record<string, string | number>): void;
+  /** Positive identification of a vessel/nerve by gentle touch. */
+  identify(id: string): void;
   /** Raycast through the current pointer ignoring some kinds (e.g. what lies under a membrane). */
   pickUnder(exclude: HitKind[]): Hit | null;
 }

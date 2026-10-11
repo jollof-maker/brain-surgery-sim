@@ -1,5 +1,6 @@
 import { EventBus } from './EventBus';
 import { advancePhase, arterialPulse } from './pulse';
+import type { ProcedureFlag, StructureId } from '../procedure/stages';
 
 export type Lang = 'en' | 'ja';
 
@@ -34,6 +35,7 @@ export interface SimEvents extends Record<string, unknown> {
   spatulaPlaced: { lobe: LobeId };
   oozeStarted: { id: number };
   oozeStopped: { id: number };
+  structureIdentified: { id: StructureId };
 }
 
 /**
@@ -66,6 +68,11 @@ export class SimState {
    *  retractionOverload — pulling on the lobes before the arachnoid was opened
    */
   metrics = { domeStress: 0, roughDissection: 0, unsafeActions: 0, retractionOverload: 0 };
+
+  /** Structures positively identified (dissector tap now, Doppler from M5). */
+  identified = new Set<StructureId>();
+  /** Outcome flags set by clip evaluation / ICG / Doppler (M5). */
+  flags = new Set<ProcedureFlag>();
 
   tick(dt: number): void {
     this.time += dt;

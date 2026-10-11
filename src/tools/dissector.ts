@@ -6,6 +6,7 @@ import type { ToolBehavior } from './types';
  * Micro dissector: blunt dissection of the tissue around the aneurysm neck.
  * Work in small, slow strokes on the PARENT ARTERY side of the neck, never by
  * pushing on the dome. Fast strokes are counted as rough handling.
+ * A gentle tap on an exposed vessel or nerve identifies it.
  */
 export const dissector: ToolBehavior = {
   id: 'dissector',
@@ -13,13 +14,14 @@ export const dissector: ToolBehavior = {
   passThrough: [],
 
   classify(hit) {
-    if (hit.kind === 'adhesion') return 'valid';
+    if (hit.kind === 'adhesion' || hit.kind === 'vessel' || hit.kind === 'nerve') return 'valid';
     if (hit.kind === 'aneurysm' || hit.kind === 'arachnoid') return 'warn';
     return 'none';
   },
 
   press(hit, ctx) {
     if (hit?.kind === 'arachnoid') ctx.say('msg.useScissorsFirst', 'warn');
+    if ((hit?.kind === 'vessel' || hit?.kind === 'nerve') && hit.id) ctx.identify(hit.id);
   },
 
   hold(p, ctx) {

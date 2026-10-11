@@ -18,6 +18,7 @@ export class Shell {
         <span><span class="label" data-i18n="hud.mag"></span><span class="num" id="hud-mag"></span></span>
         <span><span class="label" data-i18n="hud.field"></span><span class="num" id="hud-field"></span></span>
         <span class="edu" data-i18n="hud.edu"></span>
+        <button class="btn" id="help-toggle" data-i18n="hud.help"></button>
         <button class="btn" id="lang-toggle" data-i18n="hud.lang"></button>
       </div>
       <div id="controls-hint" class="panel">
@@ -59,6 +60,9 @@ export class Shell {
 
     const toggle = () => state.setLang(state.lang === 'en' ? 'ja' : 'en');
     document.getElementById('lang-toggle')!.addEventListener('click', toggle);
+    document.getElementById('help-toggle')!.addEventListener('click', () => {
+      document.getElementById('controls-hint')!.classList.toggle('open');
+    });
     document.getElementById('start-lang')!.addEventListener('click', toggle);
     state.bus.on('langChanged', (lang) => setLang(lang));
 

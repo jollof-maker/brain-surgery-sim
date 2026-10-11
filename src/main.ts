@@ -5,9 +5,13 @@ import { Anatomy } from './anatomy/Anatomy';
 import { AudioEngine } from './audio/AudioEngine';
 import { SimState } from './core/SimState';
 import { BleedingSystem } from './physics/bleeding';
+import { createProcedureView, identifyStructure } from './procedure/identify';
+import { StageMachine } from './procedure/StageMachine';
 import { updateRetraction } from './physics/retraction';
 import { Stage } from './scene/Stage';
 import { ToolManager } from './tools/ToolManager';
+import { Checklist } from './ui/Checklist';
+import { Mentor } from './ui/Mentor';
 import { Shell } from './ui/Shell';
 import { Toasts } from './ui/Toasts';
 import { Toolbar } from './ui/Toolbar';
@@ -23,16 +27,23 @@ const bleeding = new BleedingSystem();
 const audio = new AudioEngine();
 stage.scene.add(anatomy.root, bleeding.group);
 
-const tools = new ToolManager(state, anatomy, bleeding, audio, stage);
+const view = createProcedureView(state, anatomy, bleeding);
+const machine = new StageMachine(view);
+machine.bus.on('stageCompleted', ({ stage: i }) => {
+  state.toast('msg.stageComplete', 'good', { n: i + 1 });
+  audio.chime();
+});
+
+const tools = new ToolManager(state, anatomy, bleeding, audio, stage, (id) => identifyStructure(state, view, id));
 let running = false;
 const shell = new Shell(state, () => {
   running = true;
   audio.start();
   tools.enabled = true;
-  toolbar.show(true);
+  for (const p of panels) p.show(true);
 });
-const toolbar = new Toolbar(state);
-toolbar.show(false);
+const panels = [new Toolbar(state), new Checklist(state, machine), new Mentor(state, machine)];
+for (const p of panels) p.show(false);
 new Toasts(state);
 
 // Pointer position for focus-at-cursor (F).
@@ -58,6 +69,7 @@ function frame(time: number): void {
   const dt = Math.min(timer.getDelta(), 0.1);
   state.tick(dt);
   updateRetraction(state, anatomy, dt);
+  if (running) machine.update(dt);
   anatomy.update(dt, state.pulse);
   bleeding.update(dt, state.pulse);
   stage.update(dt);
@@ -70,5 +82,5 @@ requestAnimationFrame(frame);
 
 // Exposed for debugging and the smoke test.
 if (import.meta.env.DEV) {
-  Object.assign(window, { __sim: { state, stage, anatomy, bleeding, tools } });
+  Object.assign(window, { __sim: { state, stage, anatomy, bleeding, tools, machine } });
 }
