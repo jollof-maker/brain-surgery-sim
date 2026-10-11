@@ -134,9 +134,9 @@ function makeVesselTexture(): THREE.Texture {
   const rand = seededRandom(21);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 160; i++) {
+  for (let i = 0; i < 70; i++) {
     const y = rand() * 256;
-    ctx.strokeStyle = `rgba(${rand() < 0.5 ? '255,235,225' : '150,60,60'},${0.03 + rand() * 0.06})`;
+    ctx.strokeStyle = `rgba(${rand() < 0.5 ? '255,235,225' : '150,60,60'},${0.02 + rand() * 0.04})`;
     ctx.lineWidth = 1 + rand() * 2;
     ctx.beginPath();
     ctx.moveTo(0, y);
@@ -271,6 +271,18 @@ export const Materials = {
     return new THREE.MeshPhysicalMaterial({
       color: 0xffffff, map: tex().nerve, roughness: 0.42, sheen: 0.5,
       sheenColor: new THREE.Color(0xfff2d8), ...WET,
+    });
+  },
+
+  /** Thicker, fibrous arachnoid trabeculae around the aneurysm (dissection targets). */
+  adhesion(opacity: number, color: number): THREE.MeshPhysicalMaterial {
+    const map = tex().arachnoid.clone();
+    map.repeat.set(3, 3);
+    map.needsUpdate = true;
+    return new THREE.MeshPhysicalMaterial({
+      color, map, transparent: true, opacity, vertexColors: true, roughness: 0.4,
+      sheen: 0.6, sheenColor: new THREE.Color(0xffffff), clearcoat: 0.8, clearcoatRoughness: 0.2,
+      side: THREE.DoubleSide, depthWrite: false,
     });
   },
 

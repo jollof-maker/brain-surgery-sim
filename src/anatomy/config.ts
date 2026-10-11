@@ -160,9 +160,16 @@ export const ANATOMY = {
      * How far each lobe moves back toward the midline of the fissure (mm) when
      * retraction goes from 1 (opened, spatulas seated) to 0 (closed fissure).
      */
-    maxRetraction: 4,
-    /** Retraction at load (0..1). */
-    initialRetraction: 1,
+    maxRetraction: 7,
+    /** Retraction at load (0..1): the fissure starts closed. */
+    initialRetraction: 0.15,
+    /**
+     * Retraction the lobes fall open to by themselves (no spatula), from a closed
+     * fissure (`natural[0]`) to a fully opened sylvian arachnoid (`natural[1]`).
+     */
+    natural: [0.15, 0.55] as [number, number],
+    /** Max retraction a spatula can reach = tetherBase + (1 - tetherBase) × fraction of sylvian arachnoid cut. */
+    tetherBase: 0.3,
     /** Deep floor (basal cisterns / tentorial region) depth. */
     floorZ: -17,
   },
@@ -172,16 +179,37 @@ export const ANATOMY = {
    * individually with the micro scissors.
    */
   arachnoid: {
+    /**
+     * Segment indices that hide a small bridging vessel: cutting them causes a
+     * small ooze that must be coagulated with the bipolar.
+     */
+    bridging: { sylvian: [1, 4], carotid: [2] } as Record<string, number[]>,
     /** Superficial sylvian arachnoid bridging the frontal and temporal opercula. */
     sylvian: { from: [-2, -1.5, 14] as Vec3, to: [34, -2.5, 14] as Vec3, width: 34, segments: 6, opacity: 0.42 },
     /** Deeper carotid cistern arachnoid over the ICA and the aneurysm. */
     carotid: { from: [-9, 1, 4] as Vec3, to: [10, -6, 4] as Vec3, width: 22, segments: 4, opacity: 0.38 },
   },
 
-  /** Brain spatulas (retractor blades). */
+  /**
+   * Fibrous adhesions around the aneurysm that must be dissected before clipping.
+   * The neck is hidden in an arachnoid cuff (proximal and distal halves);
+   * a veil covers the PCom origin; a band tethers the dome to CN III.
+   */
+  adhesions: {
+    /** Thickness of the neck cuff outside the neck wall (mm). */
+    cuffOffset: 0.35,
+    /** Dissector stroke length (mm of tip travel) needed to free one adhesion. */
+    strokeToFree: 9,
+    /** Dissector tip speed (mm/s) above which a stroke counts as rough. */
+    roughSpeed: 30,
+    opacity: 0.7,
+    color: 0xf3ead6,
+  },
+
+  /** Brain spatulas (retractor blades), positioned for the fully retracted lobe. */
   spatulas: [
-    { id: 'frontal', tip: [14, 11.6, 4] as Vec3, handleDir: [0.1, 0.33, 1] as Vec3, width: 6, length: 60 },
-    { id: 'temporal', tip: [20, -14.8, 4] as Vec3, handleDir: [0.15, -0.35, 1] as Vec3, width: 6, length: 60 },
+    { id: 'frontal', tip: [6, 11.6, 8] as Vec3, handleDir: [0.1, 0.6, 1] as Vec3, width: 6, length: 60 },
+    { id: 'temporal', tip: [11, -14.6, 8] as Vec3, handleDir: [0.15, -0.6, 1] as Vec3, width: 6, length: 60 },
   ],
 
   colors: {

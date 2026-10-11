@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import { computeBoundsTree } from 'three-mesh-bvh';
 import { ANATOMY, type Vec3 } from './config';
 import { Materials } from './materials';
 import { fbm3, noise3 } from './noise';
+import type { LobeId } from '../core/SimState';
 
-export type LobeId = 'frontal' | 'temporal';
 
 /**
  * A lobe is a superellipsoid sculpted with gyri and sulci. Sulci are the narrow
@@ -39,6 +40,8 @@ function buildLobe(id: LobeId, center: Vec3, radii: Vec3, exponent: number): THR
     pos.setXYZ(i, p.x, p.y, p.z);
   }
   geo.computeVertexNormals();
+  // Static geometry: a BVH keeps per-frame instrument raycasts cheap.
+  computeBoundsTree.call(geo);
   const mesh = new THREE.Mesh(geo, Materials.brain());
   mesh.name = `${id}Lobe`;
   mesh.userData = { kind: 'brain', id };
@@ -55,6 +58,7 @@ function buildFloor(): THREE.Mesh {
     pos.setXYZ(i, x, y, ANATOMY.brain.floorZ + fbm3(x * 0.12, y * 0.12, 3) * 3);
   }
   geo.computeVertexNormals();
+  computeBoundsTree.call(geo);
   const mesh = new THREE.Mesh(geo, Materials.floor());
   mesh.name = 'floor';
   mesh.userData = { kind: 'floor' };
@@ -64,10 +68,9 @@ function buildFloor(): THREE.Mesh {
 
 export interface BrainModel {
   group: THREE.Group;
-  frontal: THREE.Group;
-  temporal: THREE.Group;
+  lobes: Record<LobeId, THREE.Group>;
   /** 0 = closed fissure, 1 = fully retracted. */
-  setRetraction(r: number): void;
+  setRetraction(lobe: LobeId, r: number): void;
 }
 
 export function buildBrain(): BrainModel {
@@ -80,12 +83,14 @@ export function buildBrain(): BrainModel {
   const temporal = new THREE.Group();
   temporal.add(buildLobe('temporal', b.temporal.center, b.temporal.radii, b.temporal.exponent));
   group.add(frontal, temporal, buildFloor());
+  const lobes = { frontal, temporal };
 
-  // Config positions are the opened state; lower retraction lets the lobes fall back together.
-  const setRetraction = (r: number) => {
-    frontal.position.y = -(1 - r) * b.maxRetraction;
-    temporal.position.y = (1 - r) * b.maxRetraction;
+  // Config positions are the opened state; lower retraction lets the lobe fall back toward the fissure.
+  const setRetraction = (lobe: LobeId, r: number) => {
+    const sign = lobe === 'frontal' ? -1 : 1;
+    lobes[lobe].position.y = sign * (1 - r) * b.maxRetraction;
   };
-  setRetraction(b.initialRetraction);
-  return { group, frontal, temporal, setRetraction };
+  setRetraction('frontal', b.initialRetraction);
+  setRetraction('temporal', b.initialRetraction);
+  return { group, lobes, setRetraction };
 }

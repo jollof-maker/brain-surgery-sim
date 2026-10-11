@@ -8,6 +8,9 @@ import { MicroscopeFX } from './postfx';
  * The microscope's light is coaxial (it travels down the optical path), so the
  * key light is a warm spotlight riding with the camera, aimed at the focal point.
  */
+/** `?quality=low` disables MSAA and shadows and renders at 1× pixel ratio (weak GPUs, automated tests). */
+export const LOW_QUALITY = new URLSearchParams(location.search).get('quality') === 'low';
+
 export class Stage {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -17,8 +20,8 @@ export class Stage {
 
   constructor(private readonly container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', stencil: false });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.setPixelRatio(LOW_QUALITY ? 1 : Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = !LOW_QUALITY;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.NoToneMapping; // tone mapping happens in post
     container.appendChild(this.renderer.domElement);
@@ -45,7 +48,7 @@ export class Stage {
     this.scene.add(this.light, this.light.target);
     this.scene.add(new THREE.HemisphereLight(0xffe0d0, 0x200808, 0.08));
 
-    this.fx = new MicroscopeFX(this.renderer, this.scene, this.scope);
+    this.fx = new MicroscopeFX(this.renderer, this.scene, this.scope, LOW_QUALITY);
 
     const resize = () => this.resize();
     window.addEventListener('resize', resize);

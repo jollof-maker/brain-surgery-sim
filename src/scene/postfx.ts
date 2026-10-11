@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  BloomEffect, DepthOfFieldEffect, EffectComposer, EffectPass, NoiseEffect, RenderPass,
+  BloomEffect, DepthOfFieldEffect, EffectComposer, EffectPass, KernelSize, NoiseEffect, OutlineEffect, RenderPass,
   ToneMappingEffect, ToneMappingMode, VignetteEffect, BlendFunction,
 } from 'postprocessing';
 import type { MicroscopeCamera } from './MicroscopeCamera';
@@ -11,15 +11,18 @@ import type { MicroscopeCamera } from './MicroscopeCamera';
  *    shrinks as magnification rises),
  *  - soft bloom on wet specular highlights,
  *  - warm filmic tone mapping, faint sensor grain,
- *  - vignette (the circular eyepiece edge is an HTML overlay).
+ *  - vignette (the circular eyepiece edge is an HTML overlay),
+ *  - a thin outline on the target the current instrument is hovering.
  */
 export class MicroscopeFX {
   readonly composer: EffectComposer;
   readonly dof: DepthOfFieldEffect;
+  /** Hover highlight for tool targets (selection is managed by the ToolManager). */
+  readonly outline: OutlineEffect;
 
-  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, scope: MicroscopeCamera) {
+  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, scope: MicroscopeCamera, low = false) {
     const cam = scope.camera;
-    this.composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType, multisampling: 4 });
+    this.composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType, multisampling: low ? 0 : 4 });
     this.composer.addPass(new RenderPass(scene, cam));
 
     this.dof = new DepthOfFieldEffect(cam, { focusDistance: 260, focusRange: 8, bokehScale: 2.2, resolutionScale: 0.5 });
@@ -31,8 +34,13 @@ export class MicroscopeFX {
     const grain = new NoiseEffect({ blendFunction: BlendFunction.OVERLAY, premultiply: true });
     grain.blendMode.opacity.value = 0.12;
 
+    this.outline = new OutlineEffect(scene, cam, {
+      blendFunction: BlendFunction.SCREEN, edgeStrength: 2.2, visibleEdgeColor: 0x5fe0b8, hiddenEdgeColor: 0x000000,
+      xRay: false, blur: true, kernelSize: KernelSize.VERY_SMALL, resolutionScale: low ? 0.5 : 1,
+    });
+
     this.composer.addPass(new EffectPass(cam, this.dof));
-    this.composer.addPass(new EffectPass(cam, bloom, tone, vignette, grain));
+    this.composer.addPass(new EffectPass(cam, bloom, tone, this.outline, vignette, grain));
   }
 
   update(scope: MicroscopeCamera): void {

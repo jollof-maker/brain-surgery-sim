@@ -1,8 +1,9 @@
 // Smoke test: starts the Vite dev server, opens the app in headless Edge/Chrome,
 // clicks "Begin", collects console errors and saves screenshots.
-// Usage: node scripts/smoke.mjs [outDir] [--keep]
+// Usage: node scripts/smoke.mjs [outDir]   (env: SMOKE_SCRIPT=scenario.mjs, SMOKE_EVAL=js-expression)
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { chromium } from 'playwright-core';
 import { createServer } from 'vite';
 
@@ -22,17 +23,35 @@ for (const channel of ['msedge', 'chrome']) {
 }
 if (!browser) throw new Error('No Edge/Chrome found for smoke test');
 
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const page = await browser.newPage({ viewport: process.env.SMOKE_SCRIPT ? { width: 1200, height: 750 } : { width: 1440, height: 900 } });
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push(`[pageerror] ${e.message}`));
 
-await page.goto(url, { waitUntil: 'load' });
+// Scenario runs use low quality: headless software rendering is very slow at full quality.
+await page.goto(process.env.SMOKE_SCRIPT ? `${url}?quality=low` : url, { waitUntil: 'load' });
 await page.waitForTimeout(1500);
 await page.screenshot({ path: `${outDir}/01-start.png` });
 await page.click('#begin');
 await page.waitForTimeout(2500);
 await page.screenshot({ path: `${outDir}/02-field.png` });
+
+// Optional scripted scenario: SMOKE_SCRIPT=path/to/scenario.mjs exporting
+// `default async ({ page, shot, toClient }) => summary`.
+if (process.env.SMOKE_SCRIPT) {
+  const mod = await import(pathToFileURL(resolve(process.env.SMOKE_SCRIPT)).href);
+  let n = 10;
+  const shot = (name) => page.screenshot({ path: `${outDir}/${n++}-${name}.png` });
+  // World (mm) → page pixel coordinates through the microscope camera.
+  const toClient = (p) => page.evaluate(([x, y, z]) => {
+    const { stage } = window.__sim;
+    const v = new stage.scope.camera.position.constructor(x, y, z).project(stage.scope.camera);
+    const r = stage.renderer.domElement.getBoundingClientRect();
+    return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+  }, p);
+  const summary = await mod.default({ page, shot, toClient });
+  console.log('scenario:', JSON.stringify(summary, null, 1));
+}
 
 // Optional extra step hook for milestone-specific checks.
 const extra = process.env.SMOKE_EVAL;

@@ -114,3 +114,87 @@ button { font-family: inherit; }
 #start .row { display: flex; justify-content: space-between; align-items: center; }
 #start h2 { font-size: 12px; font-weight: 600; color: var(--text); margin: 0; letter-spacing: 0.06em; text-transform: uppercase; }
 #start.hidden { display: none; }
+
+/* ---------- toolbar ---------- */
+#toolbar {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+}
+.tool {
+  position: relative;
+  width: 72px;
+  height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.tool svg { width: 24px; height: 24px; }
+.tool .name { font-size: 10px; line-height: 1.1; text-align: center; letter-spacing: 0.02em; }
+.tool .key { position: absolute; top: 2px; left: 4px; font-size: 9px; color: var(--muted); opacity: 0.7; }
+.tool:hover { color: var(--text); border-color: var(--line); }
+.tool.active { color: var(--accent); border-color: var(--accent); background: rgba(95, 224, 184, 0.08); }
+
+#tool-tip {
+  position: fixed;
+  bottom: 88px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+#clip-variants {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  gap: 6px;
+  padding: 4px;
+}
+#clip-variants .btn.active { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- toasts ---------- */
+#toasts {
+  position: fixed;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+.toast {
+  padding: 5px 14px;
+  font-size: 13px;
+  border-radius: 2px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line);
+  border-left-width: 3px;
+  transition: opacity 0.5s;
+}
+.toast.good { border-left-color: var(--accent); }
+.toast.info { border-left-color: #7fb2ff; }
+.toast.warn { border-left-color: var(--warn); color: #ffe2a0; }
+.toast.danger { border-left-color: var(--alarm); color: #ffb4b4; }
+.toast.out { opacity: 0; }
+
+@media (max-width: 1200px) {
+  #controls-hint { display: none; }
+}

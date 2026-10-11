@@ -21,6 +21,7 @@ export class Shell {
         <button class="btn" id="lang-toggle" data-i18n="hud.lang"></button>
       </div>
       <div id="controls-hint" class="panel">
+        <div data-i18n="controls.tool"></div>
         <div data-i18n="controls.tilt"></div>
         <div data-i18n="controls.pan"></div>
         <div data-i18n="controls.zoom"></div>
@@ -40,6 +41,7 @@ export class Shell {
           </div>
           <h2 data-i18n="start.controlsTitle"></h2>
           <ul>
+            <li data-i18n="controls.tool"></li>
             <li data-i18n="controls.tilt"></li>
             <li data-i18n="controls.pan"></li>
             <li data-i18n="controls.zoom"></li>

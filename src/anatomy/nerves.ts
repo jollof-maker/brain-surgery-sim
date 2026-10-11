@@ -13,10 +13,13 @@ export type NerveId = 'optic' | 'oculomotor';
  *    sinus roof. A posterolaterally/inferiorly pointing IC-PC aneurysm can
  *    press on it (third-nerve palsy: ptosis, dilated pupil).
  */
-export function buildNerves(): { group: THREE.Group; nerves: Map<NerveId, THREE.Mesh> } {
+export function buildNerves(): {
+  group: THREE.Group; nerves: Map<NerveId, THREE.Mesh>; curves: Map<NerveId, THREE.CatmullRomCurve3>;
+} {
   const group = new THREE.Group();
   group.name = 'nerves';
   const nerves = new Map<NerveId, THREE.Mesh>();
+  const curves = new Map<NerveId, THREE.CatmullRomCurve3>();
   for (const id of ['optic', 'oculomotor'] as const) {
     const cfg = ANATOMY.nerves[id];
     const curve = new THREE.CatmullRomCurve3(cfg.points.map((p) => new THREE.Vector3(...p)), false, 'centripetal');
@@ -27,6 +30,7 @@ export function buildNerves(): { group: THREE.Group; nerves: Map<NerveId, THREE.
     mesh.castShadow = mesh.receiveShadow = true;
     group.add(mesh);
     nerves.set(id, mesh);
+    curves.set(id, curve);
   }
-  return { group, nerves };
+  return { group, nerves, curves };
 }
