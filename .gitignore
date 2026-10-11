@@ -1,5 +1,21 @@
+# Dependencies and build output
 node_modules
 dist
+
+# Environment files (secrets) — commit a .env.example instead if one is ever needed
+.env
+.env.*
+!.env.example
+
+# Screenshots and output from smoke / scenario test runs
+smoke-out
+*.png
+*.jpg
+*.jpeg
+*.webp
+!public/**/*.png
+
+# Logs and OS clutter
 *.log
 .DS_Store
-smoke-out
+Thumbs.db
